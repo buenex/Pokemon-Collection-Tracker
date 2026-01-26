@@ -20,10 +20,30 @@ function initDataTable() {
         pageLength: 50,
         lengthChange: false,
         ordering: true,
-        columnDefs: [
-            { orderable: false, targets: 0 }, // Sprite
-            { orderable: false, targets: 5 }  // Checkbox
+        columns: [
+            {
+                data: 'id',
+                orderable: true,
+                render: function (data, type) {
+                    if (type === 'sort') {
+                        const stored = getStoredHave();
+                        return stored[data] === true ? 1 : 0;
+                    }
+                    return renderHaveCheckbox(data);
+                }
+            },
+            {
+                data: 'sprite',
+                orderable: false,
+                render: (data) => `<img src="${data}" class="img-size">`
+            },
+            { data: 'name' },
+            { data: 'id', type: 'num' },
+            { data: 'generation' },
+            { data: 'game' }
         ],
+        order: [[3, 'asc']],
+        drawCallback: applyHaveState,
         language: {
             search: "Search:",
             paginate: {
@@ -46,6 +66,8 @@ function initEvents() {
         const value = this.checked;
 
         saveHave(id, value);
+
+        pokemonTable.rows().invalidate().draw(false);
     });
 }
 
@@ -62,14 +84,13 @@ async function loadPokemons() {
 }
 
 function addPokemonRow(item) {
-    pokemonTable.row.add([
-        `<img src="${item.sprite}" class="img-size">`,
-        item.id,
-        item.name,
-        item.generation,
-        item.game,
-        renderHaveCheckbox(item.id)
-    ]);
+    pokemonTable.row.add({
+        id: Number(item.id),
+        sprite: item.sprite,
+        name: item.name,
+        generation: item.generation,
+        game: item.game
+    });
 }
 
 function renderHaveCheckbox(id) {
