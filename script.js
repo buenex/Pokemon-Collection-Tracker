@@ -68,6 +68,7 @@ function initEvents() {
         saveHave(id, value);
 
         pokemonTable.rows().invalidate().draw(false);
+        updateCounters();
     });
 }
 
@@ -81,6 +82,7 @@ async function loadPokemons() {
     pokemonTable.clear();
     POKEMONS.forEach(addPokemonRow);
     pokemonTable.draw();
+    updateCounters();
 }
 
 function addPokemonRow(item) {
@@ -206,6 +208,7 @@ $('#importFile').on('change', function () {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
 
             pokemonTable.rows().invalidate().draw(false);
+            updateCounters();
 
             alert('Dados importados com sucesso!');
         } catch (err) {
@@ -216,3 +219,14 @@ $('#importFile').on('change', function () {
 
     reader.readAsText(file);
 });
+
+function updateCounters() {
+    const stored = getStoredHave();
+
+    const haveCount = Object.values(stored).filter(v => v === true).length;
+    const total = POKEMONS.length;
+    const missingCount = total - haveCount;
+
+    document.getElementById('count-have').textContent = haveCount;
+    document.getElementById('count-missing').textContent = missingCount;
+}
