@@ -108,6 +108,62 @@ Essa separação facilita uma futura migração para backend, caso necessário.
 - Busca integrada
 - Atualização dinâmica sem recarregar a página
 
+---
+
+## Funcionalidades Principais
+
+### Marcação de Pokémon (`have`)
+
+* Cada Pokémon possui um toggle (checkbox)
+* O estado é salvo automaticamente no `localStorage`
+* O estado persiste após recarregar a página
+
+---
+
+### Busca e Ordenação Combinadas
+
+A tabela permite:
+
+* Buscar por **nome** ou **ID**
+* Ordenar por:
+
+  * ID
+  * Nome
+  * Status `have`
+* Combinar filtros e ordenações simultaneamente
+
+> Exemplo: ordenar por Pokémon obtidos (`have = true`) e, dentro disso, ordenar alfabeticamente.
+
+---
+
+### Exportação de Dados
+
+* Exporta os Pokémon marcados em um **JSON** no formato:
+
+```json
+[{"15": true}, {"25": true}]
+```
+
+* O conteúdo é:
+
+  * Gerado dinamicamente
+  * Copiado diretamente para o **clipboard**
+  * Ordenado alfabeticamente (A–Z)
+  * Inclui Pokémon que ainda não existem no `localStorage`
+
+---
+
+### Importação de Dados (Upload de Arquivo)
+
+* Importação feita via **upload de arquivo JSON**
+* Não é necessário colar texto manualmente
+* O arquivo segue o mesmo formato do export
+* Os dados são:
+
+  * Validados
+  * Mesclados com o `localStorage`
+  * Aplicados automaticamente na interface
+
 ## Evolução Futura (Opcional)
 
 O projeto está preparado para evoluir facilmente para:

@@ -126,3 +126,93 @@ function applyHaveState() {
 function getStoredHave() {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 }
+
+/*
+============================
+Export/Import Data
+============================
+*/
+function downloadJSON(data, filename) {
+    const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: 'application/json' }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+async function copyDontHaveToClipboard() {
+    const stored = getStoredHave();
+
+    const names = POKEMONS
+        .filter(pokemon => stored[pokemon.id] !== true)
+        .map(pokemon => pokemon.name)
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    const text = names.join('\n');
+
+    try {
+        await navigator.clipboard.writeText(text);
+        alert('Lista copiada para a área de transferência!');
+    } catch (err) {
+        console.error(err);
+        alert('Não foi possível copiar para a área de transferência.');
+    }
+}
+
+$('#exportDontHave').on('click', () => {
+    copyDontHaveToClipboard();
+});
+
+$('#exportData').on('click', () => {
+    const stored = getStoredHave();
+    downloadJSON(stored, 'pokemon-have.json');
+});
+
+$('#importData').on('click', () => {
+    $('#importFile').val(null); // limpa seleção anterior
+    $('#importFile').click();
+});
+$('#importFile').on('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+
+            if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+                alert('Formato inválido de JSON');
+                return;
+            }
+
+            const stored = getStoredHave();
+
+            Object.entries(parsed).forEach(([id, value]) => {
+                if (typeof value === 'boolean') {
+                    stored[id] = value;
+                }
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+
+            pokemonTable.rows().invalidate().draw(false);
+
+            alert('Dados importados com sucesso!');
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao ler o arquivo JSON');
+        }
+    };
+
+    reader.readAsText(file);
+});
