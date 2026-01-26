@@ -1,0 +1,29 @@
+body {
+    background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
+    min-height: 100vh;
+}
+
+.card {
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.section-title {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.table thead {
+    background-color: #0d6efd;
+    color: white;
+}
+
+img {
+    display: block;
+    width: 50px;
+    height: auto;
+  }
+
+.img-size{
+    width:50px
+}
