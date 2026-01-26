@@ -43,7 +43,10 @@ function initDataTable() {
             { data: 'game' }
         ],
         order: [[3, 'asc']],
-        drawCallback: applyHaveState,
+        drawCallback: function () {
+            applyHaveState();
+            updateCounters();
+        },
         language: {
             search: "Search:",
             paginate: {
