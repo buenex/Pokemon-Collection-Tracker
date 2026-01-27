@@ -233,3 +233,114 @@ function updateCounters() {
     document.getElementById('count-have').textContent = haveCount;
     document.getElementById('count-missing').textContent = missingCount;
 }
+/*
+===============================
+Hash methods
+===============================
+*/
+const AUTH_STORAGE_KEY = "pokemon_auth";
+
+async function generateUserHash(username, password) {
+    const encoder = new TextEncoder()
+  
+    const raw = `pokemon-manager:v1|username=${username}|password=${password}`
+  
+    const data = encoder.encode(raw)
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+  
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("")
+  }
+
+  async function saveHash(){
+    const userHash = await generateUserHash(user, password)
+
+    localStorage.setItem("userHash", userHash)
+    localStorage.setItem("username", user)
+
+  }
+
+  function renderAuthArea() {
+    const container = document.getElementById("auth-area");
+    const auth = getAuthData();
+
+    if (!auth) {
+        container.innerHTML = `
+            <a href="#" id="loginBtn">Login</a>
+        `;
+        document.getElementById("loginBtn").onclick = showLoginModal;
+    } else {
+        container.innerHTML = `
+            <span>
+                Logged in <strong>${auth.username}</strong> |
+                <a href="#" id="logoutBtn">Logout</a>
+            </span>
+        `;
+        document.getElementById("logoutBtn").onclick = logout;
+    }
+}
+
+function getAuthData() {
+    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
+}
+
+function setAuthData(data) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data));
+}
+
+function clearAuthData() {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+function showLoginModal() {
+    const modalHtml = `
+        <div class="modal fade" id="loginModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Login</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input class="form-control mb-2" id="loginUser" placeholder="User">
+                        <input class="form-control" id="loginPass" type="password" placeholder="Password">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" id="confirmLogin">Login</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+    const modal = new bootstrap.Modal(document.getElementById("loginModal"));
+    modal.show();
+
+    document.getElementById("confirmLogin").onclick = async () => {
+        const username = document.getElementById("loginUser").value.trim();
+        const password = document.getElementById("loginPass").value;
+
+        if (!username || !password) {
+            alert("Preencha usuário e senha");
+            return;
+        }
+
+        const userHash = await generateUserHash(username, password);
+
+        setAuthData({ username, userHash });
+
+        modal.hide();
+        document.getElementById("loginModal").remove();
+        renderAuthArea();
+    };
+}
+
+function logout() {
+    clearAuthData();
+    renderAuthArea();
+}
+
+renderAuthArea();
+
