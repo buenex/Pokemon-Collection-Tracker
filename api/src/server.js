@@ -4,12 +4,10 @@ const { Pool } = require("pg");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
-
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// conexão com Postgres (Render usa DATABASE_URL)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL
@@ -17,12 +15,11 @@ const pool = new Pool({
     : false,
 });
 
-// cria tabela se não existir
 async function initDB() {
   await pool.query(`
   CREATE TABLE IF NOT EXISTS saves (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id VARCHAR(60) NOT NULL,
+    user_id VARCHAR(1000) NOT NULL,
     pokemon_id INTEGER NOT NULL,
     have BOOLEAN DEFAULT FALSE,
     UNIQUE (user_id, pokemon_id)
@@ -53,8 +50,8 @@ app.get("/save/:userId", async (req, res) => {
 });
 
 app.post("/save", async (req, res) => {
+  console.log("Iniciou a funcao")
   const { userId, pokemons } = req.body;
-
   if (!userId || !Array.isArray(pokemons)) {
     return res.status(400).json({ error: "Invalid body" });
   }
@@ -63,8 +60,10 @@ app.post("/save", async (req, res) => {
 
   try {
     await client.query("BEGIN");
+    console.log("Iniciou a query")
 
     for (const p of pokemons) {
+      console.log("Iniciou com o pokemon"+p.name)
       await client.query(
         `
         INSERT INTO saves (user_id, pokemon_id, have)
@@ -74,12 +73,15 @@ app.post("/save", async (req, res) => {
         `,
         [userId, p.id, !!p.have]
       );
+      console.log("Passou pelo insert")
     }
 
     await client.query("COMMIT");
+    console.log("Commitou as alteracoes")
 
     res.json({ success: true });
   } catch (err) {
+    console.log("Iniciou a funcao")
     await client.query("ROLLBACK");
     res.status(500).json(err);
   } finally {
