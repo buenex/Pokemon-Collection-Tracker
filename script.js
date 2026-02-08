@@ -7,7 +7,7 @@ let pokemonTable;
 
 const STORAGE_KEY = "pokemon_have";
 const AUTH_STORAGE_KEY = "pokemon_auth";
-const API_URL = "http://localhost:3000";
+const API_URL = window.APP_CONFIG.API_URL;
 
 
 /* =========================================================
