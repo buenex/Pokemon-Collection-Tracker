@@ -1,31 +1,47 @@
+/* =========================================================
+   CONFIG
+========================================================= */
+
 let POKEMONS = [];
 let pokemonTable;
 
-const STORAGE_KEY = 'pokemon_have';
+const STORAGE_KEY = "pokemon_have";
+const AUTH_STORAGE_KEY = "pokemon_auth";
+const API_URL = "http://localhost:3000";
 
-/* =========================
-   Inicialização
-========================= */
-$(document).ready(() => {
+
+/* =========================================================
+   INIT
+========================================================= */
+
+$(document).ready(async () => {
     initDataTable();
-    loadPokemons();
     initEvents();
+    renderAuthArea();
+
+    applyHaveState();
+    updateCounters();
+
+    await loadPokemons();
 });
 
-/* =========================
-   DataTable
-========================= */
+
+/* =========================================================
+   DATATABLE
+========================================================= */
+
 function initDataTable() {
-    pokemonTable = $('#pokemonTable').DataTable({
+    pokemonTable = $("#pokemonTable").DataTable({
         pageLength: 50,
         lengthChange: false,
         ordering: true,
+        order: [[3, "asc"]],
         columns: [
             {
-                data: 'id',
+                data: "id",
                 orderable: true,
-                render: function (data, type) {
-                    if (type === 'sort') {
+                render: (data, type) => {
+                    if (type === "sort") {
                         const stored = getStoredHave();
                         return stored[data] === true ? 1 : 0;
                     }
@@ -33,195 +49,113 @@ function initDataTable() {
                 }
             },
             {
-                data: 'sprite',
+                data: "sprite",
                 orderable: false,
-                render: (data) => `<img src="${data}" class="img-size">`
+                render: data => `<img src="${data}" class="img-size">`
             },
-            { data: 'name' },
-            { data: 'id', type: 'num' },
-            { data: 'generation' },
-            { data: 'game' }
+            { data: "name" },
+            { data: "id", type: "num" },
+            { data: "generation" },
+            { data: "game" }
         ],
-        order: [[3, 'asc']],
-        drawCallback: function () {
+        drawCallback: () => {
             applyHaveState();
             updateCounters();
-        },
-        language: {
-            search: "Search:",
-            paginate: {
-                next: "Next",
-                previous: "Previous"
-            },
-            info: "Showing _START_ to _END_ of _TOTAL_ Pokémons",
-            zeroRecords: "No data to show."
-        },
-        drawCallback: applyHaveState
-    });
-}
-
-/* =========================
-   Eventos (event delegation)
-========================= */
-function initEvents() {
-    $('#pokemonTable').on('change', '.have-checkbox', function () {
-        const id = this.dataset.id;
-        const value = this.checked;
-
-        saveHave(id, value);
-
-        pokemonTable.rows().invalidate().draw(false);
-        updateCounters();
-    });
-}
-
-/* =========================
-   Carregamento de dados
-========================= */
-async function loadPokemons() {
-    const res = await fetch('./src/mass.json');
-    POKEMONS = await res.json();
-
-    pokemonTable.clear();
-    POKEMONS.forEach(addPokemonRow);
-    pokemonTable.draw();
-    updateCounters();
-}
-
-function addPokemonRow(item) {
-    pokemonTable.row.add({
-        id: Number(item.id),
-        sprite: item.sprite,
-        name: item.name,
-        generation: item.generation,
-        game: item.game
+        }
     });
 }
 
 function renderHaveCheckbox(id) {
     return `
         <div class="form-check form-switch">
-            <input
-                class="form-check-input have-checkbox"
-                type="checkbox"
-                data-id="${id}"
-            >
+            <input class="form-check-input have-checkbox" type="checkbox" data-id="${id}">
         </div>
     `;
 }
 
-/* =========================
-   Estado / LocalStorage
-========================= */
+
+/* =========================================================
+   EVENTS
+========================================================= */
+
+function initEvents() {
+    $("#pokemonTable").on("change", ".have-checkbox", async function () {
+        const id = this.dataset.id;
+        const newValue = this.checked;
+
+        const stored = getStoredHave();
+        const oldValue = stored[id];
+
+        saveHave(id, newValue);
+        updateCounters();
+
+        try {
+            await savePokemonToServer(id, newValue);
+        } catch {
+            saveHave(id, oldValue);
+            this.checked = oldValue;
+            updateCounters();
+            alert("Erro ao salvar no servidor");
+        }
+    });
+}
+
+
+/* =========================================================
+   LOAD DATA
+========================================================= */
+
+async function loadPokemons() {
+    syncWithServer();
+
+    const res = await fetch("./src/mass.json");
+    POKEMONS = await res.json();
+
+    pokemonTable.clear();
+    pokemonTable.rows.add(
+        POKEMONS.map(p => ({
+            id: Number(p.id),
+            sprite: p.sprite,
+            name: p.name,
+            generation: p.generation,
+            game: p.game
+        }))
+    );
+
+    pokemonTable.draw();
+}
+
+
+/* =========================================================
+   LOCAL STORAGE
+========================================================= */
+
+function getStoredHave() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+}
+
+function clearPokemonData(){
+    localStorage.removeItem(STORAGE_KEY)
+}
+
 function saveHave(id, value) {
     const data = getStoredHave();
     data[id] = value;
-
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function applyHaveState() {
     const stored = getStoredHave();
 
-    document.querySelectorAll('.have-checkbox').forEach(cb => {
+    document.querySelectorAll(".have-checkbox").forEach(cb => {
         cb.checked = stored[cb.dataset.id] === true;
     });
 }
 
-function getStoredHave() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-}
 
-/*
-============================
-Export/Import Data
-============================
-*/
-function downloadJSON(data, filename) {
-    const blob = new Blob(
-        [JSON.stringify(data, null, 2)],
-        { type: 'application/json' }
-    );
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-
-    a.href = url;
-    a.download = filename;
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-async function copyDontHaveToClipboard() {
-    const stored = getStoredHave();
-
-    const names = POKEMONS
-        .filter(pokemon => stored[pokemon.id] !== true)
-        .map(pokemon => pokemon.name)
-        .sort((a, b) => a.localeCompare(b, 'pt-BR'));
-
-    const text = names.join('\n');
-
-    try {
-        await navigator.clipboard.writeText(text);
-        alert('Lista copiada para a área de transferência!');
-    } catch (err) {
-        console.error(err);
-        alert('Não foi possível copiar para a área de transferência.');
-    }
-}
-
-$('#exportDontHave').on('click', () => {
-    copyDontHaveToClipboard();
-});
-
-$('#exportData').on('click', () => {
-    const stored = getStoredHave();
-    downloadJSON(stored, 'pokemon-have.json');
-});
-
-$('#importData').on('click', () => {
-    $('#importFile').val(null); // limpa seleção anterior
-    $('#importFile').click();
-});
-$('#importFile').on('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-        try {
-            const parsed = JSON.parse(e.target.result);
-
-            if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-                alert('Formato inválido de JSON');
-                return;
-            }
-
-            const stored = getStoredHave();
-
-            Object.entries(parsed).forEach(([id, value]) => {
-                if (typeof value === 'boolean') {
-                    stored[id] = value;
-                }
-            });
-
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-
-            pokemonTable.rows().invalidate().draw(false);
-            updateCounters();
-
-            alert('Dados importados com sucesso!');
-        } catch (err) {
-            console.error(err);
-            alert('Erro ao ler o arquivo JSON');
-        }
-    };
-
-    reader.readAsText(file);
-});
+/* =========================================================
+   COUNTERS
+========================================================= */
 
 function updateCounters() {
     const stored = getStoredHave();
@@ -230,44 +164,48 @@ function updateCounters() {
     const total = POKEMONS.length;
     const missingCount = total - haveCount;
 
-    document.getElementById('count-have').textContent = haveCount;
-    document.getElementById('count-missing').textContent = missingCount;
+    document.getElementById("count-have").textContent = haveCount;
+    document.getElementById("count-missing").textContent = missingCount;
 }
-/*
-===============================
-Hash methods
-===============================
-*/
-const AUTH_STORAGE_KEY = "pokemon_auth";
+
+
+/* =========================================================
+   AUTH
+========================================================= */
+
+function getAuthData() {
+    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
+}
+
+function setAuthData(data) {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data));
+}
+
+function clearAuthData() {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+function getUserId() {
+    return getAuthData()?.userHash || null;
+}
 
 async function generateUserHash(username, password) {
-    const encoder = new TextEncoder()
-  
-    const raw = `pokemon-manager:v1|username=${username}|password=${password}`
-  
-    const data = encoder.encode(raw)
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data)
-  
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("")
-  }
+    const encoder = new TextEncoder();
+    const raw = `pokemon-manager:v1|username=${username}|password=${password}`;
+    const data = encoder.encode(raw);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
-  async function saveHash(){
-    const userHash = await generateUserHash(user, password)
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+}
 
-    localStorage.setItem("userHash", userHash)
-    localStorage.setItem("username", user)
-
-  }
-
-  function renderAuthArea() {
+function renderAuthArea() {
     const container = document.getElementById("auth-area");
     const auth = getAuthData();
 
     if (!auth) {
-        container.innerHTML = `
-            <a href="#" id="loginBtn">Login</a>
-        `;
+        container.innerHTML = `<a href="#" id="loginBtn">Login</a>`;
         document.getElementById("loginBtn").onclick = showLoginModal;
     } else {
         container.innerHTML = `
@@ -280,16 +218,11 @@ async function generateUserHash(username, password) {
     }
 }
 
-function getAuthData() {
-    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
-}
-
-function setAuthData(data) {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data));
-}
-
-function clearAuthData() {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+function logout() {
+    clearAuthData();
+    clearPokemonData();
+    renderAuthArea();
+    loadPokemons()
 }
 
 function showLoginModal() {
@@ -334,13 +267,157 @@ function showLoginModal() {
         modal.hide();
         document.getElementById("loginModal").remove();
         renderAuthArea();
+        loadPokemons()
     };
 }
 
-function logout() {
-    clearAuthData();
-    renderAuthArea();
+
+/* =========================================================
+   SERVER SYNC
+========================================================= */
+
+async function syncWithServer() {
+    const userId = getUserId();
+    if (!userId) return;
+
+    try {
+        const res = await fetch(`${API_URL}/save/${userId}`);
+        const rows = await res.json();
+
+        const data = {};
+        rows.forEach(r => (data[r.pokemon_id] = r.have === 1));
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+        applyHaveState();
+        updateCounters();
+    } catch {
+        console.log("Usando cache local");
+    }
 }
 
-renderAuthArea();
+async function savePokemonToServer(id, have) {
+    const userId = getUserId();
+    if (!userId) return;
 
+    const res = await fetch(`${API_URL}/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            userId,
+            pokemons: [{ id: Number(id), have }]
+        })
+    });
+
+    if (!res.ok) throw new Error("fail");
+}
+
+
+/* =========================================================
+   EXPORT / IMPORT
+========================================================= */
+
+function downloadJSON(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+
+/* ---------- EXPORT FULL ---------- */
+
+$("#exportData").on("click", () => {
+    downloadJSON(getStoredHave(), "pokemon-have.json");
+});
+
+
+/* ---------- EXPORT DON'T HAVE ---------- */
+
+async function copyDontHaveToClipboard() {
+    const stored = getStoredHave();
+
+    const names = POKEMONS
+        .filter(p => stored[p.id] !== true)
+        .map(p => p.name)
+        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    try {
+        await navigator.clipboard.writeText(names.join("\n"));
+        alert("Lista copiada");
+    } catch {
+        alert("Erro ao copiar");
+    }
+}
+
+$("#exportDontHave").on("click", copyDontHaveToClipboard);
+
+
+/* ---------- IMPORT ---------- */
+
+$("#importData").on("click", () => {
+    $("#importFile").val(null);
+    $("#importFile").click();
+});
+
+$("#importFile").on("change", async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = async e => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+
+            if (typeof parsed !== "object" || Array.isArray(parsed)) {
+                alert("JSON inválido");
+                return;
+            }
+
+            const stored = getStoredHave();
+
+            Object.entries(parsed).forEach(([id, value]) => {
+                if (typeof value === "boolean") stored[id] = value;
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+
+            const userId = getUserId();
+
+            if (userId) {
+                const payload = Object.entries(stored).map(([id, have]) => ({
+                    id: Number(id),
+                    have
+                }));
+
+                try {
+                    await fetch(`${API_URL}/save`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId, pokemons: payload })
+                    });
+                } catch {
+                    alert("Importado localmente, mas falhou sync com servidor");
+                }
+            }
+
+            applyHaveState();
+            updateCounters();
+
+            alert("Importação concluída");
+        } catch {
+            alert("Erro ao ler arquivo");
+        }
+    };
+
+    reader.readAsText(file);
+});
