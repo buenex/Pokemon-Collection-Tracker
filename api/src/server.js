@@ -1,75 +1,93 @@
+require("dotenv").config();
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require("pg");
 const bodyParser = require("body-parser");
-const fs = require("fs");
 const cors = require("cors");
+
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const DB_PATH = "./data/database.sqlite";
-
-// garante pasta
-if (!fs.existsSync("./data")) fs.mkdirSync("./data");
-
-// conecta banco
-const db = new sqlite3.Database(DB_PATH);
-
-// cria tabelas
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS saves (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      pokemon_id INTEGER,
-      have INTEGER,
-      UNIQUE(user_id, pokemon_id)
-    )
-  `);
+// conexão com Postgres (Render usa DATABASE_URL)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false,
 });
+
+// cria tabela se não existir
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS saves (
+      id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      pokemon_id INTEGER NOT NULL,
+      have BOOLEAN DEFAULT FALSE,
+      UNIQUE (user_id, pokemon_id)
+    );
+  `);
+}
+
+initDB().catch(console.error);
 
 app.get("/", (_, res) => {
   res.send("API running");
 });
 
-app.get("/save/:userId", (req, res) => {
+app.get("/save/:userId", async (req, res) => {
   const { userId } = req.params;
 
-  db.all(
-    "SELECT pokemon_id, have FROM saves WHERE user_id = ?",
-    [userId],
-    (err, rows) => {
-      if (err) return res.status(500).json(err);
-      res.json(rows);
-    }
-  );
+  try {
+    const { rows } = await pool.query(
+      "SELECT pokemon_id, have FROM saves WHERE user_id = $1",
+      [userId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json(err);
+  }
 });
 
-app.post("/save", (req, res) => {
+app.post("/save", async (req, res) => {
   const { userId, pokemons } = req.body;
 
   if (!userId || !Array.isArray(pokemons)) {
     return res.status(400).json({ error: "Invalid body" });
   }
 
-  const stmt = db.prepare(`
-    INSERT INTO saves (user_id, pokemon_id, have)
-    VALUES (?, ?, ?)
-    ON CONFLICT(user_id, pokemon_id)
-    DO UPDATE SET have = excluded.have
-  `);
+  const client = await pool.connect();
 
-  pokemons.forEach(p => {
-    stmt.run(userId, p.id, p.have ? 1 : 0);
-  });
+  try {
+    await client.query("BEGIN");
 
-  stmt.finalize();
+    for (const p of pokemons) {
+      await client.query(
+        `
+        INSERT INTO saves (user_id, pokemon_id, have)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (user_id, pokemon_id)
+        DO UPDATE SET have = EXCLUDED.have
+        `,
+        [userId, p.id, !!p.have]
+      );
+    }
 
-  res.json({ success: true });
+    await client.query("COMMIT");
+
+    res.json({ success: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json(err);
+  } finally {
+    client.release();
+  }
 });
 
+const PORT = process.env.PORT || 3000;
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
 });
