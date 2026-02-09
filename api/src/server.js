@@ -50,7 +50,6 @@ app.get("/save/:userId", async (req, res) => {
 });
 
 app.post("/save", async (req, res) => {
-  console.log("Iniciou a funcao")
   const { userId, pokemons } = req.body;
   if (!userId || !Array.isArray(pokemons)) {
     return res.status(400).json({ error: "Invalid body" });
@@ -60,10 +59,7 @@ app.post("/save", async (req, res) => {
 
   try {
     await client.query("BEGIN");
-    console.log("Iniciou a query")
-
     for (const p of pokemons) {
-      console.log("Iniciou com o pokemon"+p.name)
       await client.query(
         `
         INSERT INTO saves (user_id, pokemon_id, have)
@@ -73,15 +69,12 @@ app.post("/save", async (req, res) => {
         `,
         [userId, p.id, !!p.have]
       );
-      console.log("Passou pelo insert")
     }
 
     await client.query("COMMIT");
-    console.log("Commitou as alteracoes")
 
     res.json({ success: true });
   } catch (err) {
-    console.log("Iniciou a funcao")
     await client.query("ROLLBACK");
     res.status(500).json(err);
   } finally {
@@ -89,7 +82,7 @@ app.post("/save", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);

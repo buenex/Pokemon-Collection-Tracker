@@ -3,7 +3,7 @@ services:
     build: ./api
     container_name: pokemon_api
     ports:
-      - "3000:3000"
+      - "3001:3001"
     volumes:
       - ./api/data:/app/data
     env_file:

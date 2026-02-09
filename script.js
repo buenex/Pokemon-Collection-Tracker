@@ -21,7 +21,6 @@ $(document).ready(async () => {
 
     applyHaveState();
     updateCounters();
-
     await loadPokemons();
 });
 
@@ -285,7 +284,7 @@ async function syncWithServer() {
         const rows = await res.json();
 
         const data = {};
-        rows.forEach(r => (data[r.pokemon_id] = r.have === 1));
+        rows.forEach(r => (data[r.pokemon_id] = r.have === true));
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 
