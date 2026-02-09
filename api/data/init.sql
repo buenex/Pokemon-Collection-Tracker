@@ -1,8 +1,0 @@
-USE pokemon_collector
-CREATE TABLE IF NOT EXISTS saves (
-  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id INTEGER NOT NULL,
-  pokemon_id INTEGER NOT NULL,
-  have BOOLEAN DEFAULT FALSE,
-  UNIQUE (user_id, pokemon_id)
-);
