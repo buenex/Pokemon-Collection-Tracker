@@ -81,7 +81,6 @@ app.post("/save", async (req, res) => {
     res.status(500).json(err);
   } finally {
     client.release();
-    console.log("ROLLBACK is done!");
   }
 });
 const PORT = process.env.PORT || 3001;
