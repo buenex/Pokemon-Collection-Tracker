@@ -105,24 +105,33 @@ function initEvents() {
 ========================================================= */
 
 async function loadPokemons() {
-    syncWithServer();
+    try {
+        showLoading("Sincronizando com servidor...");
 
-    const res = await fetch("./src/mass.json");
-    POKEMONS = await res.json();
+        await syncWithServer();
 
-    pokemonTable.clear();
-    pokemonTable.rows.add(
-        POKEMONS.map(p => ({
-            id: Number(p.id),
-            sprite: p.sprite,
-            name: p.name,
-            generation: p.generation,
-            game: p.game
-        }))
-    );
+        showLoading("Carregando lista de Pokémons...");
 
-    pokemonTable.draw();
+        const res = await fetch("./src/mass.json");
+        POKEMONS = await res.json();
+
+        pokemonTable.clear();
+        pokemonTable.rows.add(
+            POKEMONS.map(p => ({
+                id: Number(p.id),
+                sprite: p.sprite,
+                name: p.name,
+                generation: p.generation,
+                game: p.game
+            }))
+        );
+
+        pokemonTable.draw();
+    } finally {
+        hideLoading();
+    }
 }
+
 
 
 /* =========================================================
@@ -280,6 +289,8 @@ async function syncWithServer() {
     if (!userId) return;
 
     try {
+        showLoading("Conectando ao servidor...");
+
         const res = await fetch(`${API_URL}/save/${userId}`);
         const rows = await res.json();
 
@@ -295,21 +306,29 @@ async function syncWithServer() {
     }
 }
 
+
 async function savePokemonToServer(id, have) {
     const userId = getUserId();
     if (!userId) return;
 
-    const res = await fetch(`${API_URL}/save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            userId,
-            pokemons: [{ id: Number(id), have }]
-        })
-    });
+    try {
+        showLoading("Salvando no servidor...");
 
-    if (!res.ok) throw new Error("fail");
+        const res = await fetch(`${API_URL}/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                userId,
+                pokemons: [{ id: Number(id), have }]
+            })
+        });
+
+        if (!res.ok) throw new Error("fail");
+    } finally {
+        hideLoading();
+    }
 }
+
 
 
 /* =========================================================
@@ -420,3 +439,17 @@ $("#importFile").on("change", async function () {
 
     reader.readAsText(file);
 });
+
+/*=========================================================
+                        LOADING
+=========================================================*/
+
+function showLoading(text = "Carregando...") {
+    const el = document.getElementById("global-loading");
+    el.querySelector("p").textContent = text;
+    el.classList.remove("d-none");
+}
+
+function hideLoading() {
+    document.getElementById("global-loading").classList.add("d-none");
+}
