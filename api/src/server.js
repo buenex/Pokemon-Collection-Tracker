@@ -84,7 +84,6 @@ app.post("/save", async (req, res) => {
     console.log("ROLLBACK is done!");
   }
 });
-console.log(process.env.PORT);
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
