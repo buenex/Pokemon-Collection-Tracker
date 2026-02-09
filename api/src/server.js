@@ -31,7 +31,7 @@ async function initDB() {
 initDB().catch(console.error);
 
 app.get("/", (_, res) => {
-  res.send("API running");
+  res.send("API is running!");
 });
 
 app.get("/save/:userId", async (req, res) => {
@@ -45,6 +45,7 @@ app.get("/save/:userId", async (req, res) => {
 
     res.json(rows);
   } catch (err) {
+    console.log(err);
     res.status(500).json(err);
   }
 });
@@ -75,13 +76,15 @@ app.post("/save", async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    console.log(err);
     await client.query("ROLLBACK");
     res.status(500).json(err);
   } finally {
     client.release();
+    console.log("ROLLBACK is done!");
   }
 });
-
+console.log(process.env.PORT);
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
