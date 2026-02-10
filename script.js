@@ -8,6 +8,7 @@ let pokemonTable;
 const STORAGE_KEY = "pokemon_have";
 const AUTH_STORAGE_KEY = "pokemon_auth";
 const API_URL = window.APP_CONFIG.API_URL;
+const loading = Math.floor(Math.random()*4)+1
 
 
 /* =========================================================
@@ -15,6 +16,7 @@ const API_URL = window.APP_CONFIG.API_URL;
 ========================================================= */
 
 $(document).ready(async () => {
+    initLoading()
     initDataTable();
     initEvents();
     renderAuthArea();
@@ -452,4 +454,9 @@ function showLoading(text = "Making a picnic with your pokemons ...") {
 
 function hideLoading() {
     document.getElementById("global-loading").classList.add("d-none");
+}
+
+function initLoading(){
+    const imgLoading = document.getElementById("img-loading");
+    imgLoading.src = `./src/img/${loading}_loading.gif`
 }
