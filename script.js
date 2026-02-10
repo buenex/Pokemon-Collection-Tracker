@@ -8,6 +8,7 @@ let pokemonTable;
 const STORAGE_KEY = "pokemon_have";
 const AUTH_STORAGE_KEY = "pokemon_auth";
 const API_URL = window.APP_CONFIG.API_URL;
+const loading = Math.floor(Math.random()*4)+1
 
 
 /* =========================================================
@@ -15,6 +16,7 @@ const API_URL = window.APP_CONFIG.API_URL;
 ========================================================= */
 
 $(document).ready(async () => {
+    initLoading()
     initDataTable();
     initEvents();
     renderAuthArea();
@@ -106,11 +108,11 @@ function initEvents() {
 
 async function loadPokemons() {
     try {
-        showLoading("Sincronizando com servidor...");
+        showLoading("Calling to Professor Oak ...");
 
         await syncWithServer();
 
-        showLoading("Carregando lista de Pokémons...");
+        showLoading("Catching pokemons ...");
 
         const res = await fetch("./src/mass.json");
         POKEMONS = await res.json();
@@ -289,7 +291,7 @@ async function syncWithServer() {
     if (!userId) return;
 
     try {
-        showLoading("Conectando ao servidor...");
+        showLoading("Calling to Professor Oak ...");
 
         const res = await fetch(`${API_URL}/save/${userId}`);
         const rows = await res.json();
@@ -312,7 +314,7 @@ async function savePokemonToServer(id, have) {
     if (!userId) return;
 
     try {
-        showLoading("Salvando no servidor...");
+        showLoading("Sending pokemons to box ...");
 
         const res = await fetch(`${API_URL}/save`, {
             method: "POST",
@@ -444,7 +446,7 @@ $("#importFile").on("change", async function () {
                         LOADING
 =========================================================*/
 
-function showLoading(text = "Carregando...") {
+function showLoading(text = "Making a picnic with your pokemons ...") {
     const el = document.getElementById("global-loading");
     el.querySelector("p").textContent = text;
     el.classList.remove("d-none");
@@ -452,4 +454,9 @@ function showLoading(text = "Carregando...") {
 
 function hideLoading() {
     document.getElementById("global-loading").classList.add("d-none");
+}
+
+function initLoading(){
+    const imgLoading = document.getElementById("img-loading");
+    imgLoading.src = `./src/img/${loading}_loading.gif`
 }

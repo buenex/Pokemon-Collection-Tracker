@@ -39,3 +39,10 @@ img {
     z-index: 9999;
     backdrop-filter: blur(2px);
 }
+
+.loading-spin {
+    width: auto;
+    height: 80px;
+    animation:
+        breathe 2.4s ease-in-out infinite;
+}
