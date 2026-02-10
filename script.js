@@ -8,7 +8,7 @@ let pokemonTable;
 const STORAGE_KEY = "pokemon_have";
 const AUTH_STORAGE_KEY = "pokemon_auth";
 const API_URL = window.APP_CONFIG.API_URL;
-const loading = Math.floor(Math.random()*4)+1
+const loading = Math.floor(Math.random()*5)+1
 
 
 /* =========================================================
