@@ -9,10 +9,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL
-    ? { rejectUnauthorized: false }
-    : false,
+  connectionString: process.env.DATABASE_URL
 });
 
 async function initDB() {
