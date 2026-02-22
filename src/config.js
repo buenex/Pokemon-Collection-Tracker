@@ -1,4 +1,4 @@
 window.APP_CONFIG = {
-    API_URL: "https://pokemon-collection-tracker.onrender.com"
+    API_URL: "http://buenex-my-apis.duckdns.org/pokemon-collector/"
   };
   
