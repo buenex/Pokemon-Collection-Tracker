@@ -80,7 +80,7 @@ app.post("/save", async (req, res) => {
     client.release();
   }
 });
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT,"0.0.0.0", () => {
   console.log("Server running on port", PORT);
