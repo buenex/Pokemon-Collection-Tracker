@@ -9,3 +9,9 @@ services:
     env_file:
       - ./api/.env
     restart: always
+    networks:
+      - global_network
+
+networks:
+  global_network:
+    external: true
