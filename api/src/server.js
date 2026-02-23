@@ -5,7 +5,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: 'https://buenex.github.io' }));
 app.use(bodyParser.json());
 
 const pool = new Pool({
