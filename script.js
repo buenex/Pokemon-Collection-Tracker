@@ -367,7 +367,7 @@ async function copyDontHaveToClipboard() {
 
     const names = POKEMONS
         .filter(p => stored[p.id] !== true)
-        .map(p => p.name)
+        .map(p =>  `name: ${p.name} - id: ${p.id} - gen: ${p.generation}`)
         .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     try {
